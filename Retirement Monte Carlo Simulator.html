@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retirement Monte Carlo Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f4ef;
+    --surface: #ffffff;
+    --surface2: #f0ece4;
+    --border: #e0d8cc;
+    --text: #1a1208;
+    --text2: #7a6a55;
+    --accent: #1a4a6b;
+    --accent2: #c4a882;
+    --success: #166534;
+    --success-bg: #dcfce7;
+    --warn: #854d0e;
+    --warn-bg: #fef9c3;
+    --danger: #991b1b;
+    --danger-bg: #fee2e2;
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111820;
+      --surface: #1a2430;
+      --surface2: #0f1923;
+      --border: #2a3d52;
+      --text: #e8dcc8;
+      --text2: #8a9ab0;
+      --accent: #5a9fd4;
+      --accent2: #c4a882;
+      --success: #4ade80;
+      --success-bg: #14532d;
+      --warn: #fbbf24;
+      --warn-bg: #451a03;
+      --danger: #f87171;
+      --danger-bg: #450a0a;
+    }
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+  }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.9rem;
+    font-weight: 400;
+    color: var(--text);
+  }
+  header p {
+    color: var(--text2);
+    font-size: 0.88rem;
+    margin-top: 0.25rem;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* SIDEBAR */
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin: 1.4rem 0 0.8rem;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .field { margin-bottom: 1rem; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.83rem;
+    color: var(--text2);
+    margin-bottom: 0.35rem;
+  }
+  .field label span {
+    font-weight: 500;
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type="range"]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  .run-btn {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0.75rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .run-btn:hover { opacity: 0.88; }
+  .run-btn:active { transform: scale(0.98); }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .sim-select {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+  }
+  .sim-select button {
+    flex: 1;
+    padding: 0.35rem 0;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .sim-select button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-weight: 500;
+  }
+
+  /* MAIN */
+  main {
+    padding: 1.75rem 2rem;
+    overflow-y: auto;
+  }
+
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: var(--text2);
+    text-align: center;
+    gap: 0.75rem;
+  }
+  .placeholder svg { opacity: 0.3; }
+  .placeholder p { font-size: 0.9rem; max-width: 280px; line-height: 1.6; }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+  }
+  .metric-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 0.4rem;
+  }
+  .metric-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .metric-sub {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-top: 0.3rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    margin-top: 0.35rem;
+  }
+  .badge-green  { background: var(--success-bg); color: var(--success); }
+  .badge-yellow { background: var(--warn-bg); color: var(--warn); }
+  .badge-red    { background: var(--danger-bg); color: var(--danger); }
+
+  .outlook {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent2);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.87rem;
+    color: var(--text2);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+  .outlook strong { color: var(--text); }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .chart-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text2);
+  }
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .chart-wrap { position: relative; width: 100%; height: 360px; }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .download-btn:hover { background: var(--border); color: var(--text); }
+
+  .spinner {
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.88rem;
+    color: var(--text2);
+    padding: 2rem 0;
+  }
+  .spinner.active { display: flex; }
+  .spin {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results { display: none; }
+  .results.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Retirement Monte Carlo Simulator</h1>
+  <p>Stress-test your retirement plan across thousands of market scenarios</p>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="section-label">Portfolio</div>
+
+    <div class="field">
+      <label>Starting Portfolio <span id="lbl-portfolio">$1,200,000</span></label>
+      <input type="range" id="portfolio" min="100000" max="5000000" step="25000" value="1200000">
+    </div>
+    <div class="field">
+      <label>Retirement Horizon <span id="lbl-years">30 yrs</span></label>
+      <input type="range" id="years" min="10" max="50" step="1" value="30">
+    </div>
+
+    <div class="section-label">Spending</div>
+    <div class="field">
+      <label>Annual Spending (mean) <span id="lbl-spend">$72,000</span></label>
+      <input type="range" id="spend" min="20000" max="200000" step="1000" value="72000">
+    </div>
+    <div class="field">
+      <label>Spending Variability <span id="lbl-spend-std">$5,000</span></label>
+      <input type="range" id="spend-std" min="0" max="30000" step="500" value="5000">
+    </div>
+
+    <div class="section-label">Social Security / Income</div>
+    <div class="field">
+      <label>Annual Income <span id="lbl-ss">$24,000</span></label>
+      <input type="range" id="ss" min="0" max="80000" step="500" value="24000">
+    </div>
+    <div class="field">
+      <label>Income Starts at Year <span id="lbl-ss-start">0</span></label>
+      <input type="range" id="ss-start" min="0" max="15" step="1" value="0">
+    </div>
+
+    <div class="section-label">Market Assumptions</div>
+    <div class="field">
+      <label>Avg Annual Return <span id="lbl-ret">7.0%</span></label>
+      <input type="range" id="ret" min="1" max="12" step="0.1" value="7">
+    </div>
+    <div class="field">
+      <label>Return Volatility <span id="lbl-ret-std">12.0%</span></label>
+      <input type="range" id="ret-std" min="1" max="25" step="0.5" value="12">
+    </div>
+
+    <div class="section-label">Inflation</div>
+    <div class="field">
+      <label>Avg Annual Inflation <span id="lbl-inf">3.0%</span></label>
+      <input type="range" id="inf" min="0.5" max="8" step="0.1" value="3">
+    </div>
+    <div class="field">
+      <label>Inflation Volatility <span id="lbl-inf-std">1.0%</span></label>
+      <input type="range" id="inf-std" min="0" max="3" step="0.1" value="1">
+    </div>
+
+    <div class="section-label">Simulations</div>
+    <div class="sim-select">
+      <button onclick="setSim(1000,this)">1K</button>
+      <button onclick="setSim(5000,this)">5K</button>
+      <button onclick="setSim(10000,this)" class="active">10K</button>
+      <button onclick="setSim(20000,this)">20K</button>
+    </div>
+
+    <button class="run-btn" id="run-btn" onclick="runSim()">▶ Run Simulation</button>
+  </aside>
+
+  <main id="main">
+    <div class="placeholder" id="placeholder">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+      </svg>
+      <p>Adjust your inputs on the left, then click <strong>Run Simulation</strong> to see your results.</p>
+    </div>
+
+    <div class="spinner" id="spinner">
+      <div class="spin"></div>
+      <span id="spinner-text">Running simulations…</span>
+    </div>
+
+    <div class="results" id="results">
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Success Rate</div>
+          <div class="metric-value" id="r-rate">—</div>
+          <div id="r-badge"></div>
+          <div class="metric-sub" id="r-rate-sub"></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Median Ending Balance</div>
+          <div class="metric-value" id="r-median">—</div>
+          <div class="metric-sub">50th percentile</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Bad Scenario (10th pct)</div>
+          <div class="metric-value" id="r-p10">—</div>
+          <div class="metric-sub">Rough markets</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Good Scenario (90th pct)</div>
+          <div class="metric-value" id="r-p90">—</div>
+          <div class="metric-sub">Strong markets</div>
+        </div>
+      </div>
+
+      <div class="outlook" id="outlook"></div>
+
+      <div class="chart-card">
+        <div class="chart-title">Portfolio Balance Over Time</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#1a4a6b"></span>Median</span>
+          <span><span class="legend-dot" style="background:rgba(26,74,107,0.35)"></span>25th–75th pct</span>
+          <span><span class="legend-dot" style="background:rgba(26,74,107,0.15)"></span>10th–90th pct</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart" role="img" aria-label="Line chart of portfolio balance percentiles over retirement years">Portfolio balance projection chart</canvas>
+        </div>
+      </div>
+
+      <button class="download-btn" id="dl-btn" onclick="downloadCSV()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download CSV
+      </button>
+    </div>
+  </main>
+</div>
+
+<script>
+  let numSim = 10000;
+  let chartInst = null;
+  let lastStats = null;
+
+  function setSim(n, el) {
+    numSim = n;
+    document.querySelectorAll('.sim-select button').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function fmt(n) {
+    if (n >= 1e6)  return '$' + (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  function fmtDollar(v) {
+    return '$' + Math.round(v).toLocaleString();
+  }
+
+  function bindSlider(id, lblId, formatter) {
+    const sl = document.getElementById(id);
+    const lb = document.getElementById(lblId);
+    lb.textContent = formatter(+sl.value);
+    sl.addEventListener('input', () => { lb.textContent = formatter(+sl.value); });
+  }
+
+  bindSlider('portfolio', 'lbl-portfolio', v => '$' + Math.round(v).toLocaleString());
+  bindSlider('years',     'lbl-years',     v => v + ' yrs');
+  bindSlider('spend',     'lbl-spend',     v => '$' + Math.round(v).toLocaleString());
+  bindSlider('spend-std', 'lbl-spend-std', v => '$' + Math.round(v).toLocaleString());
+  bindSlider('ss',        'lbl-ss',        v => '$' + Math.round(v).toLocaleString());
+  bindSlider('ss-start',  'lbl-ss-start',  v => v == 0 ? 'immediately' : 'yr ' + v);
+  bindSlider('ret',       'lbl-ret',       v => (+v).toFixed(1) + '%');
+  bindSlider('ret-std',   'lbl-ret-std',   v => (+v).toFixed(1) + '%');
+  bindSlider('inf',       'lbl-inf',       v => (+v).toFixed(1) + '%');
+  bindSlider('inf-std',   'lbl-inf-std',   v => (+v).toFixed(1) + '%');
+
+  function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function simulate(params) {
+    const { portfolio, retYears, spendMean, spendStd, ssIncome, ssStart,
+            retMean, retStd, infMean, infStd } = params;
+    let bal = portfolio;
+    const balances = [];
+    for (let y = 1; y <= retYears; y++) {
+      const ret = retMean + retStd * randn();
+      const inf = infMean + infStd * randn();
+      const ifact = Math.pow(1 + inf, y);
+      const spend = (spendMean + spendStd * randn()) * ifact;
+      const income = y > ssStart ? ssIncome * ifact : 0;
+      bal = bal * (1 + ret) - spend + income;
+      balances.push(Math.max(bal, 0));
+      if (bal <= 0) {
+        while (balances.length < retYears) balances.push(0);
+        break;
+      }
+    }
+    return balances;
+  }
+
+  function pct(arr, p) {
+    const s = arr.slice().sort((a, b) => a - b);
+    return s[Math.floor(s.length * p)];
+  }
+
+  function analyze(results, retYears) {
+    const successes = results.filter(r => r[r.length - 1] > 0).length;
+    const successRate = successes / results.length;
+    const yearData = { p10: [], p25: [], med: [], p75: [], p90: [] };
+    for (let y = 0; y < retYears; y++) {
+      const col = results.map(r => r[y]);
+      yearData.p10.push(pct(col, 0.10));
+      yearData.p25.push(pct(col, 0.25));
+      yearData.med.push(pct(col, 0.50));
+      yearData.p75.push(pct(col, 0.75));
+      yearData.p90.push(pct(col, 0.90));
+    }
+    const finals = results.map(r => r[r.length - 1]);
+    return {
+      successRate,
+      yearData,
+      medianFinal: pct(finals, 0.50),
+      p10Final:    pct(finals, 0.10),
+      p90Final:    pct(finals, 0.90),
+    };
+  }
+
+  function runSim() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('results').classList.remove('active');
+    document.getElementById('spinner').classList.add('active');
+
+    const params = {
+      portfolio: +document.getElementById('portfolio').value,
+      retYears:  +document.getElementById('years').value,
+      spendMean: +document.getElementById('spend').value,
+      spendStd:  +document.getElementById('spend-std').value,
+      ssIncome:  +document.getElementById('ss').value,
+      ssStart:   +document.getElementById('ss-start').value,
+      retMean:   +document.getElementById('ret').value / 100,
+      retStd:    +document.getElementById('ret-std').value / 100,
+      infMean:   +document.getElementById('inf').value / 100,
+      infStd:    +document.getElementById('inf-std').value / 100,
+    };
+
+    setTimeout(() => {
+      const results = [];
+      for (let i = 0; i < numSim; i++) results.push(simulate(params));
+      const stats = analyze(results, params.retYears);
+      lastStats = { stats, params };
+      renderResults(stats, params);
+      btn.disabled = false;
+      document.getElementById('spinner').classList.remove('active');
+      document.getElementById('results').classList.add('active');
+    }, 30);
+  }
+
+  function renderResults(stats, params) {
+    const rate = stats.successRate;
+    document.getElementById('r-rate').textContent = (rate * 100).toFixed(1) + '%';
+    document.getElementById('r-rate-sub').textContent = 'Money lasts ' + params.retYears + ' years';
+    document.getElementById('r-median').textContent = fmt(stats.medianFinal);
+    document.getElementById('r-p10').textContent = fmt(stats.p10Final);
+    document.getElementById('r-p90').textContent = fmt(stats.p90Final);
+
+    const badge = document.getElementById('r-badge');
+    if (rate >= 0.90) {
+      badge.innerHTML = '<span class="badge badge-green">' + (rate >= 0.95 ? 'Very strong' : 'Good') + '</span>';
+    } else if (rate >= 0.70) {
+      badge.innerHTML = '<span class="badge badge-yellow">Moderate risk</span>';
+    } else {
+      badge.innerHTML = '<span class="badge badge-red">High risk</span>';
+    }
+
+    const outlookText = rate >= 0.95
+      ? 'Your plan survives even rough market sequences. You have meaningful flexibility to spend more or retire earlier.'
+      : rate >= 0.85
+      ? 'Solid plan. A small spending buffer adds extra confidence against bad market stretches.'
+      : rate >= 0.70
+      ? 'Meaningful risk of outliving your assets. Consider reducing spending, working a few more years, or delaying Social Security.'
+      : 'High probability of running short. Significant adjustments to savings, spending, or timeline are recommended.';
+    document.getElementById('outlook').innerHTML = '<strong>Outlook:</strong> ' + outlookText;
+
+    renderChart(stats, params.retYears);
+  }
+
+  function renderChart(stats, retYears) {
+    const labels = Array.from({ length: retYears }, (_, i) => 'Yr ' + (i + 1));
+    const d = stats.yearData;
+
+    if (chartInst) { chartInst.destroy(); }
+
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const tickColor = isDark ? '#8a9ab0' : '#7a6a55';
+
+    chartInst = new Chart(document.getElementById('chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: '90th pct',
+            data: d.p90,
+            borderColor: 'rgba(26,74,107,0.25)',
+            backgroundColor: 'rgba(26,74,107,0.07)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: '+3',
+            tension: 0.3,
+          },
+          {
+            label: '75th pct',
+            data: d.p75,
+            borderColor: 'rgba(26,74,107,0.35)',
+            backgroundColor: 'rgba(26,74,107,0.12)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: '+1',
+            tension: 0.3,
+          },
+          {
+            label: 'Median',
+            data: d.med,
+            borderColor: '#1a4a6b',
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+          },
+          {
+            label: '25th pct',
+            data: d.p25,
+            borderColor: 'rgba(26,74,107,0.35)',
+            backgroundColor: 'rgba(26,74,107,0.12)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+          },
+          {
+            label: '10th pct',
+            data: d.p10,
+            borderColor: 'rgba(26,74,107,0.25)',
+            backgroundColor: 'rgba(26,74,107,0.07)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+          },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw)
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: tickColor,
+              maxTicksLimit: 10,
+              font: { size: 11, family: 'DM Sans' }
+            },
+            grid: { color: gridColor }
+          },
+          y: {
+            ticks: {
+              color: tickColor,
+              font: { size: 11, family: 'DM Sans' },
+              callback: v => fmt(v)
+            },
+            grid: { color: gridColor }
+          }
+        }
+      }
+    });
+  }
+
+  function downloadCSV() {
+    if (!lastStats) return;
+    const { stats, params } = lastStats;
+    const rows = [['Year', 'Median', '10th Pct', '25th Pct', '75th Pct', '90th Pct']];
+    for (let i = 0; i < params.retYears; i++) {
+      rows.push([
+        i + 1,
+        Math.round(stats.yearData.med[i]),
+        Math.round(stats.yearData.p10[i]),
+        Math.round(stats.yearData.p25[i]),
+        Math.round(stats.yearData.p75[i]),
+        Math.round(stats.yearData.p90[i]),
+      ]);
+    }
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'retirement_results.csv';
+    a.click();
+  }
+</script>
+</body>
+</html>
