@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Savings Rate Calculator — Clearground</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  .result-hero {
+    text-align: center;
+    padding: 2rem 1rem 1.5rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.5rem;
+  }
+  .result-years {
+    font-family: var(--serif);
+    font-size: 4rem;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+  .result-years span { font-size: 1.5rem; color: var(--ink2); }
+  .result-sub { font-size: 0.88rem; color: var(--ink2); }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .comp-card {
+    background: var(--paper2);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 0.9rem 1rem;
+    text-align: center;
+  }
+  .comp-rate { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); margin-bottom: 0.3rem; }
+  .comp-years { font-family: var(--serif); font-size: 1.5rem; color: var(--ink); }
+  .comp-sub { font-size: 0.72rem; color: var(--ink3); margin-top: 0.2rem; }
+  .comp-card.highlight { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: var(--accent-lt); }
+  .comp-card.highlight .comp-years { color: var(--accent); }
+
+  .insight {
+    background: var(--paper2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--r) var(--r) 0;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.85rem;
+    color: var(--ink2);
+    margin-bottom: 1.5rem;
+    line-height: 1.65;
+  }
+  .insight strong { color: var(--ink); }
+
+  .fi-number {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .fi-stat { background: var(--paper2); border: 1px solid var(--line); border-radius: var(--r); padding: 0.9rem 1rem; }
+  .fi-stat-label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); margin-bottom: 0.3rem; }
+  .fi-stat-val { font-family: var(--serif); font-size: 1.4rem; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">Clear<em>ground</em></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="simulator.html">Retirement</a></li>
+      <li><a href="savings.html" class="active">Savings Rate</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="tool-layout">
+  <aside class="tool-sidebar">
+    <div class="section-label">Your Finances</div>
+
+    <div class="field">
+      <div class="field-label">Annual income (gross) <strong id="lbl-income">$100,000</strong></div>
+      <input type="range" id="income" min="30000" max="500000" step="5000" value="100000">
+    </div>
+    <div class="field">
+      <div class="field-label">Annual savings <strong id="lbl-savings">$20,000</strong></div>
+      <input type="range" id="savings" min="0" max="200000" step="1000" value="20000">
+    </div>
+    <div class="field">
+      <div class="field-label">Current portfolio <strong id="lbl-current">$50,000</strong></div>
+      <input type="range" id="current" min="0" max="2000000" step="5000" value="50000">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Assumptions</div>
+    <div class="field">
+      <div class="field-label">Annual return (real) <strong id="lbl-return">5.0%</strong></div>
+      <input type="range" id="return" min="1" max="10" step="0.1" value="5">
+    </div>
+    <div class="field">
+      <div class="field-label">Safe withdrawal rate <strong id="lbl-swr">4.0%</strong></div>
+      <input type="range" id="swr" min="2" max="6" step="0.1" value="4">
+    </div>
+    <div class="field">
+      <div class="field-label">Annual spending <strong id="lbl-spend">$80,000</strong></div>
+      <input type="range" id="spend" min="10000" max="300000" step="1000" value="80000">
+    </div>
+
+    <button class="btn btn-run" onclick="calculate()" style="margin-top:1.5rem">Calculate</button>
+  </aside>
+
+  <main class="tool-main">
+    <div class="placeholder" id="placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+      </svg>
+      <p>Enter your income and savings, then click <strong>Calculate</strong> to see your path to financial independence.</p>
+    </div>
+
+    <div class="results" id="results">
+      <div class="result-hero">
+        <div class="result-years" id="r-years">—<span> yrs</span></div>
+        <div class="result-sub" id="r-sub">to financial independence at your current savings rate</div>
+      </div>
+
+      <div class="fi-number">
+        <div class="fi-stat">
+          <div class="fi-stat-label">Your savings rate</div>
+          <div class="fi-stat-val" id="r-rate">—</div>
+        </div>
+        <div class="fi-stat">
+          <div class="fi-stat-label">FI number (portfolio needed)</div>
+          <div class="fi-stat-val" id="r-fi">—</div>
+        </div>
+        <div class="fi-stat">
+          <div class="fi-stat-label">Portfolio at FI (projected)</div>
+          <div class="fi-stat-val" id="r-proj">—</div>
+        </div>
+        <div class="fi-stat">
+          <div class="fi-stat-label">Monthly savings</div>
+          <div class="fi-stat-val" id="r-monthly">—</div>
+        </div>
+      </div>
+
+      <div class="insight" id="r-insight"></div>
+
+      <div class="section-label" style="margin-bottom:0.75rem">How much does your savings rate matter?</div>
+      <div class="comparison-grid" id="r-comparison"></div>
+
+      <div class="chart-card">
+        <div class="chart-title">Portfolio Growth to Financial Independence</div>
+        <div class="chart-wrap">
+          <canvas id="chart"></canvas>
+        </div>
+      </div>
+
+      <div style="font-size:0.76rem;color:var(--ink3);margin-top:0.5rem;line-height:1.6">
+        Uses the 4% rule (or your chosen SWR) as the FI threshold. Real return means after inflation. Results are projections, not guarantees.
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer>
+  <p>Clearground · For educational purposes only — not financial advice · <a href="index.html">Home</a></p>
+</footer>
+
+<script>
+  let chartInst = null;
+
+  function fmtD(n) {
+    if (n >= 1e6)  return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1000) return '$' + Math.round(n/1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  function bindSlider(id, lblId, fn) {
+    const sl = document.getElementById(id), lb = document.getElementById(lblId);
+    lb.textContent = fn(+sl.value);
+    sl.addEventListener('input', () => { lb.textContent = fn(+sl.value); calculate(); });
+  }
+
+  bindSlider('income',  'lbl-income',  v => '$' + Math.round(v).toLocaleString());
+  bindSlider('savings', 'lbl-savings', v => '$' + Math.round(v).toLocaleString());
+  bindSlider('current', 'lbl-current', v => '$' + Math.round(v).toLocaleString());
+  bindSlider('return',  'lbl-return',  v => (+v).toFixed(1) + '%');
+  bindSlider('swr',     'lbl-swr',     v => (+v).toFixed(1) + '%');
+  bindSlider('spend',   'lbl-spend',   v => '$' + Math.round(v).toLocaleString());
+
+  function yearsToFI(annualSavings, currentPortfolio, annualSpending, realReturn, swr) {
+    const fiNum = annualSpending / (swr / 100);
+    if (currentPortfolio >= fiNum) return 0;
+    const r = realReturn / 100;
+    if (r === 0) return annualSavings > 0 ? Math.ceil((fiNum - currentPortfolio) / annualSavings) : 999;
+    // Solve: P*(1+r)^n + S*((1+r)^n - 1)/r = FI
+    for (let n = 1; n <= 100; n++) {
+      const growth = currentPortfolio * Math.pow(1+r, n) + annualSavings * (Math.pow(1+r, n) - 1) / r;
+      if (growth >= fiNum) return n;
+    }
+    return '>100';
+  }
+
+  function portfolioPath(annualSavings, currentPortfolio, realReturn, years) {
+    const r = realReturn / 100;
+    const path = [currentPortfolio];
+    let bal = currentPortfolio;
+    for (let y = 1; y <= years; y++) {
+      bal = bal * (1+r) + annualSavings;
+      path.push(bal);
+    }
+    return path;
+  }
+
+  function calculate() {
+    const income  = +document.getElementById('income').value;
+    const savings = +document.getElementById('savings').value;
+    const current = +document.getElementById('current').value;
+    const ret     = +document.getElementById('return').value;
+    const swr     = +document.getElementById('swr').value;
+    const spend   = +document.getElementById('spend').value;
+
+    const rate  = income > 0 ? savings / income : 0;
+    const fiNum = spend / (swr / 100);
+    const yrs   = yearsToFI(savings, current, spend, ret, swr);
+
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('results').classList.add('active');
+
+    document.getElementById('r-years').innerHTML = (yrs === '>100' ? '>100' : yrs) + '<span> yrs</span>';
+    document.getElementById('r-rate').textContent    = (rate*100).toFixed(1) + '%';
+    document.getElementById('r-fi').textContent      = fmtD(fiNum);
+    document.getElementById('r-monthly').textContent = fmtD(savings/12) + '/mo';
+
+    const horizonYrs = typeof yrs === 'number' && yrs <= 100 ? yrs : 40;
+    const finalBal = current * Math.pow(1 + ret/100, horizonYrs) + savings * (Math.pow(1 + ret/100, horizonYrs) - 1) / (ret/100);
+    document.getElementById('r-proj').textContent = fmtD(finalBal);
+
+    // Insight
+    const saveMore5 = yearsToFI(savings + income*0.05, current, spend, ret, swr);
+    const diff = typeof yrs === 'number' && typeof saveMore5 === 'number' ? yrs - saveMore5 : null;
+    document.getElementById('r-insight').innerHTML = diff !== null && diff > 0
+      ? `<strong>Quick insight:</strong> Saving just 5% more of your income (~${fmtD(income*0.05/12)}/mo extra) would get you to FI <strong>${diff} year${diff!==1?'s':''} sooner</strong>.`
+      : `<strong>Quick insight:</strong> At a ${(rate*100).toFixed(0)}% savings rate you're building wealth steadily. Your FI number is ${fmtD(fiNum)}.`;
+
+    // Comparison table
+    const rates = [0.10, 0.20, 0.30, 0.50, 0.70];
+    const compHTML = rates.map(r => {
+      const s = income * r;
+      const y = yearsToFI(s, current, spend, ret, swr);
+      const isMe = Math.abs(r - rate) < 0.05;
+      return `<div class="comp-card${isMe?' highlight':''}">
+        <div class="comp-rate">${Math.round(r*100)}% rate</div>
+        <div class="comp-years">${y === '>100' ? '>100' : y}<span style="font-size:0.9rem;color:var(--ink2)"> yrs</span></div>
+        <div class="comp-sub">${fmtD(income*r)}/yr saved</div>
+      </div>`;
+    }).join('');
+    document.getElementById('r-comparison').innerHTML = compHTML;
+
+    // Chart
+    const chartYears = Math.min(typeof yrs === 'number' ? yrs + 5 : 40, 50);
+    const labels = Array.from({length: chartYears+1}, (_,i) => 'Yr '+i);
+    const path   = portfolioPath(savings, current, ret, chartYears);
+
+    if (chartInst) chartInst.destroy();
+    chartInst = new Chart(document.getElementById('chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Portfolio',
+            data: path,
+            borderColor: '#2d5a3d',
+            backgroundColor: 'rgba(45,90,61,0.06)',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.3,
+          },
+          {
+            label: 'FI Target',
+            data: Array(chartYears+1).fill(fiNum),
+            borderColor: '#c0392b',
+            borderWidth: 1.5,
+            borderDash: [6,4],
+            pointRadius: 0,
+            fill: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { font:{size:11,family:'Inter'}, color:'#6b6b58', boxWidth:12 } },
+          tooltip: { mode:'index', intersect:false, callbacks:{ label: ctx => ctx.dataset.label+': '+fmtD(ctx.raw) } }
+        },
+        scales: {
+          x: { ticks:{color:'#a8a892',maxTicksLimit:10,font:{size:11,family:'Inter'}}, grid:{color:'rgba(0,0,0,0.04)'} },
+          y: { ticks:{color:'#a8a892',font:{size:11,family:'Inter'},callback:v=>fmtD(v)}, grid:{color:'rgba(0,0,0,0.04)'} }
+        }
+      }
+    });
+  }
+
+  // Auto-run on load
+  calculate();
+</script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retirement Simulator — Clearground</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">Clear<em>ground</em></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="simulator.html" class="active">Retirement</a></li>
+      <li><a href="savings.html">Savings Rate</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="tool-layout">
+  <aside class="tool-sidebar">
+    <div class="section-label">Portfolio</div>
+    <div class="field">
+      <div class="field-label">Starting portfolio <strong id="lbl-portfolio">$1,200,000</strong></div>
+      <input type="range" id="portfolio" min="100000" max="5000000" step="25000" value="1200000">
+    </div>
+    <div class="field">
+      <div class="field-label">Retirement horizon <strong id="lbl-years">30 yrs</strong></div>
+      <input type="range" id="years" min="10" max="50" step="1" value="30">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Spending</div>
+    <div class="field">
+      <div class="field-label">Annual spending (mean) <strong id="lbl-spend">$72,000</strong></div>
+      <input type="range" id="spend" min="20000" max="200000" step="1000" value="72000">
+    </div>
+    <div class="field">
+      <div class="field-label">Spending variability <strong id="lbl-spend-std">$5,000</strong></div>
+      <input type="range" id="spend-std" min="0" max="30000" step="500" value="5000">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Social Security / Income</div>
+    <div class="field">
+      <div class="field-label">Annual income <strong id="lbl-ss">$24,000</strong></div>
+      <input type="range" id="ss" min="0" max="80000" step="500" value="24000">
+    </div>
+    <div class="field">
+      <div class="field-label">Income starts at year <strong id="lbl-ss-start">immediately</strong></div>
+      <input type="range" id="ss-start" min="0" max="15" step="1" value="0">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Market Assumptions</div>
+    <div class="field">
+      <div class="field-label">Avg annual return <strong id="lbl-ret">7.0%</strong></div>
+      <input type="range" id="ret" min="1" max="12" step="0.1" value="7">
+    </div>
+    <div class="field">
+      <div class="field-label">Return volatility <strong id="lbl-ret-std">12.0%</strong></div>
+      <input type="range" id="ret-std" min="1" max="25" step="0.5" value="12">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Inflation</div>
+    <div class="field">
+      <div class="field-label">Avg annual inflation <strong id="lbl-inf">3.0%</strong></div>
+      <input type="range" id="inf" min="0.5" max="8" step="0.1" value="3">
+    </div>
+    <div class="field">
+      <div class="field-label">Inflation variability <strong id="lbl-inf-std">1.0%</strong></div>
+      <input type="range" id="inf-std" min="0" max="3" step="0.1" value="1">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Simulations</div>
+    <div class="sim-select">
+      <button onclick="setSim(1000,this)">1K</button>
+      <button onclick="setSim(5000,this)">5K</button>
+      <button onclick="setSim(10000,this)" class="active">10K</button>
+      <button onclick="setSim(20000,this)">20K</button>
+    </div>
+
+    <button class="btn btn-run" id="run-btn" onclick="runSim()" style="margin-top:1.5rem">▶ Run Simulation</button>
+  </aside>
+
+  <main class="tool-main">
+    <div class="placeholder" id="placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+      </svg>
+      <p>Adjust your inputs, then click <strong>Run Simulation</strong> to see your results.</p>
+    </div>
+
+    <div class="spinner" id="spinner">
+      <div class="spin"></div>
+      <span>Running simulations…</span>
+    </div>
+
+    <div class="results" id="results">
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Success Rate</div>
+          <div class="metric-value" id="r-rate">—</div>
+          <div id="r-badge"></div>
+          <div class="metric-sub" id="r-rate-sub"></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Median Ending Balance</div>
+          <div class="metric-value" id="r-median">—</div>
+          <div class="metric-sub">50th percentile</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Bad Scenario (10th pct)</div>
+          <div class="metric-value" id="r-p10">—</div>
+          <div class="metric-sub">Rough markets</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Good Scenario (90th pct)</div>
+          <div class="metric-value" id="r-p90">—</div>
+          <div class="metric-sub">Strong markets</div>
+        </div>
+      </div>
+
+      <div class="outlook" id="outlook"></div>
+
+      <div class="chart-card">
+        <div class="chart-title">Portfolio Balance Over Time</div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:#2d5a3d"></span>Median</span>
+          <span><span class="legend-dot" style="background:rgba(45,90,61,0.3)"></span>25th–75th pct</span>
+          <span><span class="legend-dot" style="background:rgba(45,90,61,0.12)"></span>10th–90th pct</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart"></canvas>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="downloadCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download CSV
+      </button>
+    </div>
+  </main>
+</div>
+
+<footer>
+  <p>Clearground · For educational purposes only — not financial advice · <a href="index.html">Home</a></p>
+</footer>
+
+<script>
+  let numSim = 10000, chartInst = null, lastStats = null;
+
+  function setSim(n, el) {
+    numSim = n;
+    document.querySelectorAll('.sim-select button').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function fmt(n) {
+    if (n >= 1e6)  return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1000) return '$' + Math.round(n/1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  function bindSlider(id, lblId, fn) {
+    const sl = document.getElementById(id), lb = document.getElementById(lblId);
+    lb.textContent = fn(+sl.value);
+    sl.addEventListener('input', () => lb.textContent = fn(+sl.value));
+  }
+
+  bindSlider('portfolio',  'lbl-portfolio',  v => '$' + Math.round(v).toLocaleString());
+  bindSlider('years',      'lbl-years',      v => v + ' yrs');
+  bindSlider('spend',      'lbl-spend',      v => '$' + Math.round(v).toLocaleString());
+  bindSlider('spend-std',  'lbl-spend-std',  v => '$' + Math.round(v).toLocaleString());
+  bindSlider('ss',         'lbl-ss',         v => '$' + Math.round(v).toLocaleString());
+  bindSlider('ss-start',   'lbl-ss-start',   v => v == 0 ? 'immediately' : 'yr ' + v);
+  bindSlider('ret',        'lbl-ret',        v => (+v).toFixed(1) + '%');
+  bindSlider('ret-std',    'lbl-ret-std',    v => (+v).toFixed(1) + '%');
+  bindSlider('inf',        'lbl-inf',        v => (+v).toFixed(1) + '%');
+  bindSlider('inf-std',    'lbl-inf-std',    v => (+v).toFixed(1) + '%');
+
+  function randn() {
+    let u = 0, v = 0;
+    while (!u) u = Math.random();
+    while (!v) v = Math.random();
+    return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+  }
+
+  function simulate(p) {
+    let bal = p.portfolio;
+    const balances = [];
+    for (let y = 1; y <= p.retYears; y++) {
+      const ret  = p.retMean + p.retStd * randn();
+      const inf  = p.infMean + p.infStd * randn();
+      const ifact = Math.pow(1+inf, y);
+      const spend = (p.spendMean + p.spendStd * randn()) * ifact;
+      const income = y > p.ssStart ? p.ssIncome * ifact : 0;
+      bal = bal * (1+ret) - spend + income;
+      balances.push(Math.max(bal, 0));
+      if (bal <= 0) { while (balances.length < p.retYears) balances.push(0); break; }
+    }
+    return balances;
+  }
+
+  function pct(arr, p) {
+    const s = arr.slice().sort((a,b) => a-b);
+    return s[Math.floor(s.length * p)];
+  }
+
+  function analyze(results, retYears) {
+    const successes = results.filter(r => r[r.length-1] > 0).length;
+    const d = { p10:[], p25:[], med:[], p75:[], p90:[] };
+    for (let y = 0; y < retYears; y++) {
+      const col = results.map(r => r[y]);
+      d.p10.push(pct(col,.10)); d.p25.push(pct(col,.25));
+      d.med.push(pct(col,.50)); d.p75.push(pct(col,.75)); d.p90.push(pct(col,.90));
+    }
+    const finals = results.map(r => r[r.length-1]);
+    return { successRate: successes/results.length, yearData: d,
+             medianFinal: pct(finals,.50), p10Final: pct(finals,.10), p90Final: pct(finals,.90) };
+  }
+
+  function runSim() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('results').classList.remove('active');
+    document.getElementById('spinner').classList.add('active');
+
+    const params = {
+      portfolio: +document.getElementById('portfolio').value,
+      retYears:  +document.getElementById('years').value,
+      spendMean: +document.getElementById('spend').value,
+      spendStd:  +document.getElementById('spend-std').value,
+      ssIncome:  +document.getElementById('ss').value,
+      ssStart:   +document.getElementById('ss-start').value,
+      retMean:   +document.getElementById('ret').value / 100,
+      retStd:    +document.getElementById('ret-std').value / 100,
+      infMean:   +document.getElementById('inf').value / 100,
+      infStd:    +document.getElementById('inf-std').value / 100,
+    };
+
+    setTimeout(() => {
+      const results = Array.from({length: numSim}, () => simulate(params));
+      const stats = analyze(results, params.retYears);
+      lastStats = { stats, params };
+      renderResults(stats, params);
+      btn.disabled = false;
+      document.getElementById('spinner').classList.remove('active');
+      document.getElementById('results').classList.add('active');
+    }, 30);
+  }
+
+  function renderResults(stats, params) {
+    const rate = stats.successRate;
+    document.getElementById('r-rate').textContent = (rate*100).toFixed(1) + '%';
+    document.getElementById('r-rate-sub').textContent = 'Money lasts ' + params.retYears + ' yrs';
+    document.getElementById('r-median').textContent = fmt(stats.medianFinal);
+    document.getElementById('r-p10').textContent    = fmt(stats.p10Final);
+    document.getElementById('r-p90').textContent    = fmt(stats.p90Final);
+
+    const badge = document.getElementById('r-badge');
+    badge.innerHTML = rate >= 0.90
+      ? `<span class="badge badge-green">${rate>=0.95?'Very strong':'Good'}</span>`
+      : rate >= 0.70
+      ? `<span class="badge badge-yellow">Moderate risk</span>`
+      : `<span class="badge badge-red">High risk</span>`;
+
+    document.getElementById('outlook').innerHTML = '<strong>Outlook:</strong> ' + (
+      rate >= 0.95 ? 'Your plan survives even rough market sequences. You have meaningful flexibility to spend more or retire earlier.'
+      : rate >= 0.85 ? 'Solid plan. A small spending buffer adds extra confidence against bad market stretches.'
+      : rate >= 0.70 ? 'Meaningful risk of outliving your assets. Consider reducing spending, working longer, or delaying Social Security.'
+      : 'High probability of running short. Significant adjustments to savings, spending, or timeline are recommended.'
+    );
+
+    renderChart(stats, params.retYears);
+  }
+
+  function renderChart(stats, retYears) {
+    const labels = Array.from({length: retYears}, (_,i) => 'Yr '+(i+1));
+    const d = stats.yearData;
+    if (chartInst) chartInst.destroy();
+    chartInst = new Chart(document.getElementById('chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label:'90th pct', data:d.p90, borderColor:'rgba(45,90,61,0.2)', backgroundColor:'rgba(45,90,61,0.06)', borderWidth:1, pointRadius:0, fill:'+3', tension:0.35 },
+          { label:'75th pct', data:d.p75, borderColor:'rgba(45,90,61,0.3)', backgroundColor:'rgba(45,90,61,0.10)', borderWidth:1, pointRadius:0, fill:'+1', tension:0.35 },
+          { label:'Median',   data:d.med, borderColor:'#2d5a3d', backgroundColor:'transparent', borderWidth:2.5, pointRadius:0, fill:false, tension:0.35 },
+          { label:'25th pct', data:d.p25, borderColor:'rgba(45,90,61,0.3)', backgroundColor:'rgba(45,90,61,0.10)', borderWidth:1, pointRadius:0, fill:false, tension:0.35 },
+          { label:'10th pct', data:d.p10, borderColor:'rgba(45,90,61,0.2)', backgroundColor:'rgba(45,90,61,0.06)', borderWidth:1, pointRadius:0, fill:false, tension:0.35 },
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: { legend:{display:false}, tooltip:{mode:'index',intersect:false, callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.raw)}} },
+        scales: {
+          x: { ticks:{color:'#a8a892',maxTicksLimit:10,font:{size:11,family:'Inter'}}, grid:{color:'rgba(0,0,0,0.04)'} },
+          y: { ticks:{color:'#a8a892',font:{size:11,family:'Inter'},callback:v=>fmt(v)}, grid:{color:'rgba(0,0,0,0.04)'} }
+        }
+      }
+    });
+  }
+
+  function downloadCSV() {
+    if (!lastStats) return;
+    const { stats, params } = lastStats;
+    const rows = [['Year','Median','10th Pct','25th Pct','75th Pct','90th Pct']];
+    for (let i = 0; i < params.retYears; i++) {
+      rows.push([i+1, Math.round(stats.yearData.med[i]), Math.round(stats.yearData.p10[i]),
+        Math.round(stats.yearData.p25[i]), Math.round(stats.yearData.p75[i]), Math.round(stats.yearData.p90[i])]);
+    }
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
+    a.download = 'retirement_results.csv';
+    a.click();
+  }
+</script>
+</body>
+</html>

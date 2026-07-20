@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clearground — Personal Finance Tools</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ── Home-only styles ── */
+  .hero {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 6rem 2rem 5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+  .hero-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 1.2rem;
+  }
+  .hero-headline {
+    font-family: var(--serif);
+    font-size: clamp(2.4rem, 4vw, 3.4rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 1.25rem;
+  }
+  .hero-headline em { font-style: italic; color: var(--accent); }
+  .hero-body {
+    font-size: 1rem;
+    color: var(--ink2);
+    line-height: 1.7;
+    max-width: 420px;
+    margin-bottom: 2rem;
+  }
+  .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+  .hero-visual {
+    background: var(--paper2);
+    border: 1px solid var(--line);
+    border-radius: var(--r2);
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-visual::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+  .visual-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 1rem;
+  }
+  .visual-stat {
+    font-family: var(--serif);
+    font-size: 3rem;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .visual-sub { font-size: 0.82rem; color: var(--ink2); margin-bottom: 1.5rem; }
+  .visual-bars { display: flex; flex-direction: column; gap: 8px; }
+  .vbar-row { display: flex; align-items: center; gap: 10px; font-size: 0.76rem; color: var(--ink2); }
+  .vbar-track { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .vbar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+  .vbar-fill.dim { background: var(--ink3); }
+  .vbar-fill.danger { background: #c0392b; }
+  .vbar-val { font-family: var(--mono); font-size: 0.72rem; color: var(--ink); width: 36px; text-align: right; }
+
+  /* ── Tools section ── */
+  .tools-section { border-top: 1px solid var(--line); padding: 4rem 0; }
+  .tools-inner { max-width: var(--max); margin: 0 auto; padding: 0 2rem; }
+  .tools-header { margin-bottom: 2rem; }
+  .tools-header h2 { font-family: var(--serif); font-size: 1.9rem; font-weight: 400; color: var(--ink); }
+  .tools-header p { font-size: 0.9rem; color: var(--ink2); margin-top: 0.35rem; }
+  .tools-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+
+  .tool-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r2);
+    padding: 1.75rem;
+    text-decoration: none;
+    display: block;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .tool-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+  }
+  .tool-card-icon {
+    width: 40px; height: 40px;
+    background: var(--accent-lt);
+    border-radius: var(--r);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.1rem;
+    color: var(--accent);
+  }
+  .tool-card h3 { font-family: var(--serif); font-size: 1.25rem; font-weight: 400; color: var(--ink); margin-bottom: 0.4rem; }
+  .tool-card p { font-size: 0.84rem; color: var(--ink2); line-height: 1.65; margin-bottom: 1.1rem; }
+  .tool-card-link { font-size: 0.8rem; font-weight: 500; color: var(--accent); display: flex; align-items: center; gap: 4px; }
+
+  /* ── How it works ── */
+  .how-section { border-top: 1px solid var(--line); padding: 4rem 0; background: var(--paper2); }
+  .how-inner { max-width: var(--max); margin: 0 auto; padding: 0 2rem; }
+  .how-inner h2 { font-family: var(--serif); font-size: 1.75rem; font-weight: 400; margin-bottom: 0.4rem; }
+  .how-inner > p { color: var(--ink2); font-size: 0.9rem; margin-bottom: 2.5rem; }
+  .how-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  .how-step { }
+  .step-num { font-family: var(--mono); font-size: 0.72rem; color: var(--ink3); margin-bottom: 0.65rem; }
+  .step-title { font-family: var(--serif); font-size: 1.05rem; color: var(--ink); margin-bottom: 0.4rem; }
+  .step-body { font-size: 0.84rem; color: var(--ink2); line-height: 1.65; }
+
+  /* ── Disclaimer ── */
+  .disclaimer { max-width: var(--max); margin: 0 auto; padding: 0 2rem; font-size: 0.77rem; color: var(--ink3); line-height: 1.6; margin-top: 2rem; }
+
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem; gap: 2rem; }
+    .tools-grid { grid-template-columns: 1fr; }
+    .how-steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">Clear<em>ground</em></a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="simulator.html">Retirement</a></li>
+      <li><a href="savings.html">Savings Rate</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section>
+  <div class="hero">
+    <div class="hero-copy">
+      <p class="hero-eyebrow">Personal Finance Tools</p>
+      <h1 class="hero-headline">See your future,<br><em>clearly.</em></h1>
+      <p class="hero-body">Simple, honest tools that run thousands of scenarios so you can plan retirement and savings with confidence — not guesswork.</p>
+      <div class="hero-actions">
+        <a href="simulator.html" class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          Run the simulator
+        </a>
+        <a href="savings.html" class="btn btn-ghost">Savings calculator →</a>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-label">Sample — 30-year projection</div>
+      <div class="visual-stat">91.4%</div>
+      <div class="visual-sub">chance of not outliving your money</div>
+      <div class="visual-bars">
+        <div class="vbar-row">
+          <span style="width:60px">90th pct</span>
+          <div class="vbar-track"><div class="vbar-fill" style="width:88%"></div></div>
+          <span class="vbar-val">$3.2M</span>
+        </div>
+        <div class="vbar-row">
+          <span style="width:60px">Median</span>
+          <div class="vbar-track"><div class="vbar-fill dim" style="width:52%"></div></div>
+          <span class="vbar-val">$1.9M</span>
+        </div>
+        <div class="vbar-row">
+          <span style="width:60px">10th pct</span>
+          <div class="vbar-track"><div class="vbar-fill danger" style="width:14%"></div></div>
+          <span class="vbar-val">$0.5M</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tools-section">
+  <div class="tools-inner">
+    <div class="tools-header">
+      <h2>The tools</h2>
+      <p>Each one built around a single question you actually need to answer.</p>
+    </div>
+    <div class="tools-grid">
+      <a href="simulator.html" class="tool-card">
+        <div class="tool-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </div>
+        <h3>Retirement Simulator</h3>
+        <p>Run 10,000 market scenarios to find the probability your money lasts as long as you need it to. Adjusts for returns, inflation, spending, and Social Security.</p>
+        <span class="tool-card-link">Open simulator <span>→</span></span>
+      </a>
+      <a href="savings.html" class="tool-card">
+        <div class="tool-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3>Savings Rate Calculator</h3>
+        <p>Find out how your savings rate today affects how many years until financial independence. See the dramatic difference small increases make over time.</p>
+        <span class="tool-card-link">Open calculator <span>→</span></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="how-section">
+  <div class="how-inner">
+    <h2>How the simulator works</h2>
+    <p>Monte Carlo analysis, explained plainly.</p>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-num">01</div>
+        <div class="step-title">You set your situation</div>
+        <div class="step-body">Enter your portfolio, spending, Social Security income, and assumptions about market returns and inflation — all adjustable with sliders.</div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">02</div>
+        <div class="step-title">We simulate 10,000 futures</div>
+        <div class="step-body">Each run draws random returns and inflation from your assumptions, producing a different outcome. Together they map the full range of plausible futures.</div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">03</div>
+        <div class="step-title">You see the honest picture</div>
+        <div class="step-body">Not a single projected number, but the full distribution — best case, worst case, and everything in between — so you can plan for reality.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="disclaimer">
+  <strong>Disclaimer:</strong> Clearground is a personal project for educational purposes only. Nothing here is financial advice. All simulations use simplified models and historical assumptions that may not reflect future results. Consult a qualified financial advisor before making retirement decisions.
+</div>
+
+<footer>
+  <p>Clearground · Personal Finance Tools · Built for curiosity, not profit · <a href="index.html">Home</a> · <a href="simulator.html">Retirement</a> · <a href="savings.html">Savings Rate</a></p>
+</footer>
+
+</body>
+</html>
